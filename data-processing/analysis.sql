@@ -36,7 +36,28 @@ FROM
       GROUP BY `license address`, `name of business`) AS noncritical_count
     ON noncritical_count.id = business.id
 ;
--- Add some other columns
+-- Code frequency
+ALTER TABLE analysis ADD code_frequency INTEGER;
+ALTER TABLE analysis ADD code_frequency_code VARCHAR(256);
+UPDATE
+  analysis AS a
+SET
+  a.code_frequency = (SELECT
+    COUNT(i.`CodeSection`)
+    FROM `InspectionHistory-008` AS i
+    WHERE CONCAT(i.`license address`, i.`name of business`) = a.id
+    GROUP BY i.`CodeSection`, i.`Critical`
+    ORDER BY COUNT(i.`CodeSection`) DESC, i.`Critical` DESC, i.`CodeSection`
+    LIMIT 1),
+  a.code_frequency_code = (SELECT
+    `CodeSection` AS code_frequency_code
+    FROM `InspectionHistory-008`
+    WHERE CONCAT(`license address`, `name of business`) = a.id
+    GROUP BY `CodeSection`, `Critical`
+    ORDER BY COUNT(`CodeSection`) DESC, `Critical` DESC, `CodeSection`
+    LIMIT 1)
+;
+-- Ratio columns
 ALTER TABLE analysis ADD critical_violation_ratio FLOAT;
 UPDATE analysis SET critical_violation_ratio = (critical_count / total_violations);
 
